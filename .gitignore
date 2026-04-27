@@ -16,3 +16,6 @@ libs/
 # OS
 .DS_Store
 Thumbs.db
+bin/
+out/
+hs_err_pid*
