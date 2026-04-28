@@ -92,3 +92,9 @@ sonarqube {
         property("sonar.java.source", "25")
     }
 }
+
+
+// Sonar braucht test + (falls vorhanden) jacocoTestReport vor sich selbst
+tasks.findByName("sonar")?.dependsOn(
+    listOfNotNull(tasks.findByName("test"), tasks.findByName("jacocoTestReport"))
+)
