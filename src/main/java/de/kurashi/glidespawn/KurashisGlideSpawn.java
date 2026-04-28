@@ -1,6 +1,8 @@
 package de.kurashi.glidespawn;
 
 import com.google.gson.Gson;
+import de.kurashi.lib.event.AutoUnregisterListener;
+import de.kurashi.lib.scheduler.TaskScheduler;
 import de.kurashi.lib.util.JsonUtil;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Holder;
@@ -54,7 +56,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 public class KurashisGlideSpawn extends JavaPlugin {
@@ -68,6 +69,8 @@ public class KurashisGlideSpawn extends JavaPlugin {
     private Path firstJoinedFile;
 
     private com.hypixel.hytale.server.core.io.adapter.PacketFilter packetFilter;
+    private AutoUnregisterListener listeners;
+    private TaskScheduler scheduler;
 
     public KurashisGlideSpawn(@Nonnull JavaPluginInit init) {
         super(init);
@@ -79,9 +82,12 @@ public class KurashisGlideSpawn extends JavaPlugin {
         firstJoinedFile = getDataDirectory().resolve("firstjoined.json");
         loadFirstJoined();
 
-        getEventRegistry().registerGlobal(PlayerReadyEvent.class, this::onPlayerReady);
-        getEventRegistry().register(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
-        getEventRegistry().registerGlobal(AddPlayerToWorldEvent.class, this::onAddToWorld);
+        listeners = new AutoUnregisterListener(this);
+        scheduler = new TaskScheduler(this);
+
+        listeners.registerGlobal(PlayerReadyEvent.class, this::onPlayerReady);
+        listeners.register(PlayerDisconnectEvent.class, this::onPlayerDisconnect);
+        listeners.registerGlobal(AddPlayerToWorldEvent.class, this::onAddToWorld);
 
         packetFilter = PacketAdapters.registerInbound((PacketHandler handler, Packet packet) -> {
             if (!(packet instanceof ClientMovement movPacket)) return;
@@ -109,6 +115,8 @@ public class KurashisGlideSpawn extends JavaPlugin {
             stopDescentTask(state);
         }
         states.clear();
+        if (scheduler != null) scheduler.cancelAll();
+        if (listeners != null) listeners.unregisterAll();
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -158,10 +166,7 @@ public class KurashisGlideSpawn extends JavaPlugin {
         }
 
         World world = event.getWorld();
-        HytaleServer.SCHEDULED_EXECUTOR.schedule(() ->
-            world.execute(() -> teleportToSpawn(playerRef, world)),
-            500, TimeUnit.MILLISECONDS
-        );
+        scheduler.schedule(() -> world.execute(() -> teleportToSpawn(playerRef, world)), 500L);
     }
 
     private void loadFirstJoined() {
@@ -363,7 +368,7 @@ public class KurashisGlideSpawn extends JavaPlugin {
 
         stopDescentTask(state);
 
-        state.descentTask = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(() -> {
+        state.descentTask = scheduler.scheduleAtFixedRate(() -> {
             if (!state.gliding) {
                 stopDescentTask(state);
                 return;
@@ -373,7 +378,7 @@ public class KurashisGlideSpawn extends JavaPlugin {
             World w = Universe.get().getWorld(wUuid);
             if (w == null) return;
             w.execute(() -> applyDescent(playerRef));
-        }, config.descentIntervalMs, config.descentIntervalMs, TimeUnit.MILLISECONDS);
+        }, config.descentIntervalMs, config.descentIntervalMs);
     }
 
     private void stopDescentTask(PlayerGlideState state) {
@@ -432,7 +437,7 @@ public class KurashisGlideSpawn extends JavaPlugin {
         }
 
         // Invulnerable nach kurzer Verzoegerung entfernen
-        HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+        scheduler.schedule(() -> {
             PlayerGlideState s = states.get(playerRef.getUuid());
             if (s != null && s.gliding) return;
             UUID wUuid = playerRef.getWorldUuid();
@@ -444,7 +449,7 @@ public class KurashisGlideSpawn extends JavaPlugin {
                 if (r == null || !r.isValid()) return;
                 r.getStore().tryRemoveComponent(r, Invulnerable.getComponentType());
             });
-        }, 500, TimeUnit.MILLISECONDS);
+        }, 500L);
     }
 
     // ──────────────────────────────────────────────────────────────────
