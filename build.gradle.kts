@@ -2,11 +2,11 @@ import net.ltgt.gradle.errorprone.errorprone
 
 plugins {
     id("java-library")
-    id("com.gradleup.shadow") version "9.3.1"
-    id("org.sonarqube") version "7.2.3.7755"
-    id("net.ltgt.errorprone") version "5.1.0"
-    id("info.solidsoft.pitest") version "1.19.0"
-    id("org.owasp.dependencycheck") version "12.2.0"
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.sonarqube)
+    alias(libs.plugins.errorprone)
+    alias(libs.plugins.pitest)
+    alias(libs.plugins.dependencycheck)
 }
 
 group = "de.kurashi"
@@ -28,8 +28,8 @@ dependencies {
     // ClassLoader-Konflikt zur Laufzeit.
 
     // Error Prone + NullAway
-    errorprone("com.google.errorprone:error_prone_core:2.36.0")
-    errorprone("com.uber.nullaway:nullaway:0.12.6")
+    errorprone(libs.errorprone.core)
+    errorprone(libs.nullaway)
 }
 
 tasks {
