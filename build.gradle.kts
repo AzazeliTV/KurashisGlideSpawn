@@ -24,7 +24,8 @@ repositories {
 dependencies {
     compileOnly("com.hypixel.hytale:Server:+")
     compileOnly(fileTree("../kurashi_lib/build/libs/") { include("KurashiLib-*.jar") })
-    implementation("com.google.code.gson:gson:2.10.1")
+    // gson kommt via KurashiLib (shaded). KEIN erneutes implementation gson — sonst
+    // ClassLoader-Konflikt zur Laufzeit.
 
     // Error Prone + NullAway
     errorprone("com.google.errorprone:error_prone_core:2.36.0")
@@ -63,7 +64,6 @@ tasks {
     shadowJar {
         archiveBaseName.set(rootProject.name)
         archiveClassifier.set("")
-        relocate("com.google.gson", "de.kurashi.glidespawn.libs.gson")
         minimize()
     }
 

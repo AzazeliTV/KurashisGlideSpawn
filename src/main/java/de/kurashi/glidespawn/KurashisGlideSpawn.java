@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import de.kurashi.lib.event.AutoUnregisterListener;
 import de.kurashi.lib.scheduler.TaskScheduler;
 import de.kurashi.lib.util.JsonUtil;
+// Lib v2: Config via AbstractConfigLoader (Atomic-Write + Schema-Versioning)
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
@@ -166,7 +167,13 @@ public class KurashisGlideSpawn extends JavaPlugin {
         }
 
         World world = event.getWorld();
-        scheduler.schedule(() -> world.execute(() -> teleportToSpawn(playerRef, world)), 500L);
+        scheduleAndForget(() -> world.execute(() -> teleportToSpawn(playerRef, world)), 500L);
+    }
+
+    /** Helper: fire-and-forget Schedule. shutdown() ruft scheduler.cancelAll(). */
+    @SuppressWarnings("FutureReturnValueIgnored")
+    private void scheduleAndForget(Runnable task, long delayMs) {
+        var unused = scheduler.schedule(task, delayMs);
     }
 
     private void loadFirstJoined() {
@@ -189,7 +196,7 @@ public class KurashisGlideSpawn extends JavaPlugin {
     private void saveFirstJoinedAsync() {
         List<String> snapshot = new ArrayList<>();
         for (UUID uuid : firstJoinedPlayers) snapshot.add(uuid.toString());
-        HytaleServer.SCHEDULED_EXECUTOR.execute(() -> {
+        scheduleAndForget(() -> {
             try {
                 Files.createDirectories(firstJoinedFile.getParent());
                 try (Writer w = Files.newBufferedWriter(firstJoinedFile, StandardCharsets.UTF_8)) {
@@ -198,7 +205,7 @@ public class KurashisGlideSpawn extends JavaPlugin {
             } catch (IOException e) {
                 getLogger().at(Level.WARNING).log("firstjoined.json konnte nicht gespeichert werden: " + e.getMessage());
             }
-        });
+        }, 0L);
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -436,8 +443,8 @@ public class KurashisGlideSpawn extends JavaPlugin {
             mm.update(playerRef.getPacketHandler());
         }
 
-        // Invulnerable nach kurzer Verzoegerung entfernen
-        scheduler.schedule(() -> {
+        // Invulnerable nach kurzer Verzoegerung entfernen.
+        scheduleAndForget(() -> {
             PlayerGlideState s = states.get(playerRef.getUuid());
             if (s != null && s.gliding) return;
             UUID wUuid = playerRef.getWorldUuid();
@@ -517,30 +524,8 @@ public class KurashisGlideSpawn extends JavaPlugin {
     // ──────────────────────────────────────────────────────────────────
 
     private void loadConfig() {
-        Path configFile = getDataDirectory().resolve("glidespawn.json");
-        if (Files.exists(configFile)) {
-            try (Reader r = Files.newBufferedReader(configFile, StandardCharsets.UTF_8)) {
-                config = GSON.fromJson(r, GlideConfig.class);
-                getLogger().at(Level.INFO).log("Config geladen");
-            } catch (IOException e) {
-                getLogger().at(Level.WARNING).log("Config-Fehler, nutze Defaults: " + e.getMessage());
-                config = new GlideConfig();
-            }
-            saveConfig(configFile);
-        } else {
-            config = new GlideConfig();
-            saveConfig(configFile);
-        }
-    }
-
-    private void saveConfig(Path configFile) {
-        try {
-            Files.createDirectories(configFile.getParent());
-            try (Writer w = Files.newBufferedWriter(configFile, StandardCharsets.UTF_8)) {
-                GSON.toJson(config, w);
-            }
-        } catch (IOException e) {
-            getLogger().at(Level.WARNING).log("Config konnte nicht gespeichert werden: " + e.getMessage());
-        }
+        GlideConfigLoader loader = new GlideConfigLoader(getDataDirectory());
+        config = loader.loadOrCreate();
+        getLogger().at(Level.INFO).log("Config geladen via AbstractConfigLoader");
     }
 }
