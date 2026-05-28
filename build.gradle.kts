@@ -22,7 +22,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("com.hypixel.hytale:Server:+")
+    compileOnly(libs.hytale.server)
     compileOnly(fileTree("../kurashi_lib/build/libs/") { include("KurashiLib-*.jar") })
     // gson kommt via KurashiLib (shaded). KEIN erneutes implementation gson — sonst
     // ClassLoader-Konflikt zur Laufzeit.

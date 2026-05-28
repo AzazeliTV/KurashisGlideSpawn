@@ -11,8 +11,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import org.joml.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.packets.player.ClientMovement;
@@ -323,7 +323,7 @@ public class KurashisGlideSpawn extends JavaPlugin {
 
         Transform spawnTransform = new Transform(
             new Vector3d(config.spawnX, config.spawnY, config.spawnZ),
-            new Vector3f(0, 0, 0)
+            new Rotation3f(0, 0, 0)
         );
         Teleport teleport = Teleport.createForPlayer(world, spawnTransform);
         store.addComponent(ref, Teleport.getComponentType(), teleport);
@@ -418,9 +418,9 @@ public class KurashisGlideSpawn extends JavaPlugin {
 
         Vector3d dir = headRot.getDirection();
         Vector3d boostVel = new Vector3d(
-            dir.getX() * config.boostForce,
-            dir.getY() * config.boostForce,
-            dir.getZ() * config.boostForce
+            dir.x * config.boostForce,
+            dir.y * config.boostForce,
+            dir.z * config.boostForce
         );
         vel.addInstruction(boostVel, null, ChangeVelocityType.Add);
     }
