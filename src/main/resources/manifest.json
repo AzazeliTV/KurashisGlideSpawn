@@ -4,7 +4,7 @@
     "Version": "${version}",
     "Description": "${description}",
     "Authors": [{ "Name": "Kurashi" }],
-    "ServerVersion": "2026.03.26-89796e57b",
+    "ServerVersion": ">=0.5.0 <0.6.0",
     "Main": "de.kurashi.glidespawn.KurashisGlideSpawn",
     "Dependencies": {
         "Kurashi:Lib": "*"
