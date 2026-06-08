@@ -1,0 +1,48 @@
+# Consumer-Mod CI — Build+Test mit Sibling-Build der privaten KurashiLib.
+# KurashiLib ist privat -> Cross-Checkout braucht das Secret KURASHILIB_TOKEN
+# (fine-grained PAT, read-only Contents auf AzazeliTV/KurashiLib).
+# maven.hytale.com/release ist oeffentlich -> sonst keine Secrets noetig.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout mod
+        uses: actions/checkout@v6
+        with:
+          path: mod
+
+      - name: Checkout KurashiLib (private sibling-dependency)
+        uses: actions/checkout@v6
+        with:
+          repository: AzazeliTV/KurashiLib
+          token: ${{ secrets.KURASHILIB_TOKEN }}
+          path: kurashi_lib
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build KurashiLib (liefert ../kurashi_lib/build/libs/KurashiLib-*.jar)
+        run: cd kurashi_lib && ./gradlew --no-daemon shadowJar
+
+      - name: Build + Test mod
+        run: cd mod && ./gradlew --no-daemon build
